@@ -1,8 +1,30 @@
 import numpy as np
 
-"""
-def iou_batch(bb_test, bb_gt)
-"""
+
+def iou_batch(detections, trackers):
+    """
+    Computes IOU between two bounding boxes in the form [x1,y1,x2,y2]
+    """
+    dets = np.expand_dims(detections, 1)
+    trks = np.expand_dims(trackers, 0)
+
+    x1 = np.maximum(dets[..., 0], trks[..., 0])
+    y1 = np.maximum(dets[..., 1], trks[..., 1])
+
+    x2 = np.minimum(dets[..., 2], trks[..., 2])
+    y2 = np.minimum(dets[..., 3], trks[..., 3])
+
+    w = np.maximum(0.0, x2 - x1)
+    h = np.maximum(0.0, y2 - y1)
+    wh = w * h
+
+    det_area = (dets[..., 2] - dets[..., 0]) * (dets[..., 3] - dets[..., 1])
+    trk_area = (trks[..., 2] - trks[..., 0]) * (trks[..., 3] - trks[..., 1])
+
+    iou = wh / (det_area + trk_area - wh)
+
+    return iou
+    
 
 class HungarianMatcher:
     def _step1_2_reduce(self, C):
@@ -20,8 +42,10 @@ class HungarianMatcher:
 
         return C
         
-    # Cover all zeros using the minimum number of rows and columns
     def _cover_zeros(self, C):
+        """
+        Cover all zeros using the minimum number of rows and columns
+        """
         n = C.shape[0]
         zero_pos = np.where(C == 0)
 
@@ -52,8 +76,11 @@ class HungarianMatcher:
 
         return covered_rows, covered_cols
 
-    # If total coverage doesn't equal to matrix size, we need to adjust matrix
     def _adjust_matrix(self, C, covered_rows, covered_cols):
+        """
+        If total coverage doesn't equal to matrix size, we need to adjust matrix
+        """
+
         n = C.shape[0]
 
         # mask = True means uncovered area
@@ -104,8 +131,10 @@ class HungarianMatcher:
 
         return assignments
 
-    # main function of Hungarian tracker
     def solve(self, cost_matrix):
+        """
+        main function of Hungarian tracker
+        """
         C = self._step1_2_reduce(cost_matrix)
         n = C.shape[0]
 
