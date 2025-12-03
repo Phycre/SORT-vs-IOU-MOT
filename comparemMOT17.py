@@ -41,6 +41,9 @@ def run_sort_tracker(detections_by_frame):
                 x1, y1, w, h, 
                 1, 1, 1
                 ])
+    return results
+
+
 
 def run_iou_tracker(detections_by_frame):
     return 0

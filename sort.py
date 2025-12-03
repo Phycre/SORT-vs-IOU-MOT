@@ -41,19 +41,12 @@ class Sort:
             self.trackers.append(trk)
 
         ret = []
-
-        i = len(self.trackers)
-        for trk in reversed(self.trackers):
+        for trk in self.trackers():
             d = trk.get_state().reshape(4)
-
             if(trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
-
                 ret.append(np.concatenate((d, [trk.id])))
-
-            if trk.time_since_update > self.max_age:
-                self.trackers.pop(i - 1)
-            i -= 1
-
+        self.trackers = [trk for trk in self.trackers if trk.time_since_update <= self.max_age]
+            
         if len(ret) > 0:
             return np.stack(ret)
         return np.empty((0, 5))
