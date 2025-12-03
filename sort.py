@@ -41,7 +41,7 @@ class Sort:
             self.trackers.append(trk)
 
         ret = []
-        for trk in self.trackers():
+        for trk in self.trackers:
             d = trk.get_state().reshape(4)
             if(trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
                 ret.append(np.concatenate((d, [trk.id])))
