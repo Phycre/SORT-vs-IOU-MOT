@@ -4,6 +4,7 @@
 import os
 import numpy as np
 import motmetrics as mm
+from sort import Sort
 
 def load_mot17_sequence(seq_path):
     det_path = seq_path + "/det/det.txt"
@@ -17,9 +18,29 @@ def load_mot17_sequence(seq_path):
     return dets, gt, max_frame
 
 def run_sort_tracker(detections_by_frame):
-    return 0
-    #run sort here
-    #return tracking results in MOTChallenge format
+    tracker = Sort()
+    results = []
+    for frame in sorted(detections_by_frame.keys()):
+        dets_xywh = detections_by_frame[frame]
+
+        dets = []
+        for d in dets_xywh:
+            x, y, w, h = d 
+            dets.append([x, y, x + w, y + h])
+        dets = np.asarray(dets)
+
+        tracks = tracker.update(dets)
+        for t in tracks:
+            x1, y1, x2, y2, tid = t 
+            w = x2 - x1
+            h = y2 - y1 
+
+            results.append([
+                frame,
+                int(tid),
+                x1, y1, w, h, 
+                1, 1, 1
+                ])
 
 def run_iou_tracker(detections_by_frame):
     return 0
@@ -65,9 +86,9 @@ def main():
     sort_outfile = f"results/{seq}_SORT.txt"
     save_results(sort_results, sort_outfile)
 
-    iou_results = run_iou_tracker(detections_by_frame)
-    iou_outfile = f"results/{seq}_iou.txt"
-    save_results(iou_results, iou_outfile)
+ #   iou_results = run_iou_tracker(detections_by_frame)
+ #   iou_outfile = f"results/{seq}_iou.txt"
+ #   save_results(iou_results, iou_outfile)
 
 
     #finish
@@ -76,8 +97,8 @@ def main():
     print("\nEvaluating SORT")
     evaluate_mot(gt_path, sort_outfile)
 
-    print("\nEvaluating IOU")
-    evaluate_mot(gt_path, iou_outfile)
+ #   print("\nEvaluating IOU")
+ #   evaluate_mot(gt_path, iou_outfile)
 
 if __name__ == "__main__":
     main()
