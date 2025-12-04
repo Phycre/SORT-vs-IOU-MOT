@@ -43,12 +43,72 @@ def run_sort_tracker(detections_by_frame):
                 ])
     return results
 
+def compute_iou(box1, box2):
+    x1 = max(box1[0], box2[0])
+    y1 = max(box1[1], box2[1])
+    x2 = min(box1[2], box2[2])
+    y2 = min(box1[3], box2[3])
 
+    inter = max(0, x2 - x1) * max(0, y2 - y1)
+
+    area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
+    area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
+    union = area1 + area2 - inter
+    return inter / union if union > 0 else 0
 
 def run_iou_tracker(detections_by_frame):
-    return 0
-    #run iou here
-    #return tracking results in MOTChallenge format
+    active_tracks = []
+    next_id = 0 
+    results = []
+
+    for frame in sorted(detections_by_frame.keys()):
+        dets_xywh = detections_by_frame[frame]
+
+        dets = []
+        for d in dets_xywh:
+            x, y, w, h = d 
+            dets.append([x, y, x + w, y + h])
+
+        if len(active_tracks) == 0:
+            for det in dets:
+                active_tracks.append(np.concatenate([det, [next_id]]))
+                next_id += 1
+        else:
+            new_tracks = []
+            used_tracks = set()
+
+            for det in dets:
+                best_iou = 0.3
+                best_track_idx = -1
+
+                for i, track in enumerate(active_tracks):
+                    if i in used_tracks:
+                        continue
+                    iou = compute_iou(det, track[:4])
+                    if iou > best_iou:
+                        best_iou = iou
+                        best_track_idx = i
+
+                if best_track_idx >= 0:
+                    track_id = active_tracks[best_track_idx][4]
+                    new_tracks.append(det + [track_id])
+                    used_tracks.add(best_track_idx)
+                else:
+                    new_tracks.append(det + [next_id])
+                    next_id += 1 
+            active_tracks = new_tracks
+        for track in active_tracks:
+            x1, y1, x2, y2, tid = track 
+            w = x2 - x1
+            h = y2 - y1
+            results.append([
+                frame,
+                int(tid),
+                x, y, w, h,
+                1, 1, 1
+                ])
+    
+    return results        
 
 
 def save_results(results, out_path):
@@ -89,9 +149,9 @@ def main():
     sort_outfile = f"results/{seq}_SORT.txt"
     save_results(sort_results, sort_outfile)
 
- #   iou_results = run_iou_tracker(detections_by_frame)
- #   iou_outfile = f"results/{seq}_iou.txt"
- #   save_results(iou_results, iou_outfile)
+    iou_results = run_iou_tracker(detections_by_frame)
+    iou_outfile = f"results/{seq}_iou.txt"
+    save_results(iou_results, iou_outfile)
 
 
     #finish
@@ -100,8 +160,8 @@ def main():
     print("\nEvaluating SORT")
     evaluate_mot(gt_path, sort_outfile)
 
- #   print("\nEvaluating IOU")
- #   evaluate_mot(gt_path, iou_outfile)
+    print("\nEvaluating IOU")
+    evaluate_mot(gt_path, iou_outfile)
 
 if __name__ == "__main__":
     main()
